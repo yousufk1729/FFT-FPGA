@@ -9,7 +9,7 @@ We will be implementing the 8-point Cooley-Tukey radix-2 DIT FFT on my DE1-SoC F
 
 My implementation is not parameterized, and I am also using Q0.7 fixed-point arithmetic (1 sign bit, 7 fractional bits for a representation between -1 and 1). Putting my ECE216 knowledge to good use, I tested it with an impulse and a sine wave, and got expected results. 
 
-I want some images in this writeup so here’s the RTL viewer and a butterfly diagram:
+I want an image in this writeup so here’s a butterfly diagram:
 
 ## Next Steps
 I’m not too happy with the workflow of this project because I quickly made test programs and kept running back and forth between my fixed-point hex converter, DFT calculator, and FPGA board hex display values (talk about visual debugging). 
