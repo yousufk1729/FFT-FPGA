@@ -24,9 +24,11 @@ Unfortunately, my C code is fast enough that the clock() function and the Window
 
 FPGA testing coming soon… I need to add a timer and use smth like JTAG UART to send it back
 
-Python: 2078200 ns
-C: 108.62 ns (~315 average cycles)
-FPGA: …
+| Implementation | Execution Time | Cycles | Speedup |
+|----------------|----------------|--------|-------------------|
+| Python | 2,078,200 ns | too many | 1x |
+| C | 108.62 ns | ~315 | 19,133x |
+| FPGA | … | - | - |
 
 ## Next Steps
 
