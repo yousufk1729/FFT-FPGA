@@ -2,30 +2,28 @@ module fft (
     input wire clk,
     input wire rst_n,
     input wire start,
-    input wire signed [7:0] x_real [0:7],
-    input wire signed [7:0] x_imag [0:7],
-    output logic signed [7:0] X_real [0:7],
-    output logic signed [7:0] X_imag [0:7],
+    input wire signed [15:0] x_real [0:7],
+    input wire signed [15:0] x_imag [0:7],
+    output logic signed [15:0] X_real [0:7],
+    output logic signed [15:0] X_imag [0:7],
     output logic done
 );
 
-    logic signed [7:0] stage0_real [0:7];
-    logic signed [7:0] stage0_imag [0:7];
-    logic signed [7:0] stage1_real [0:7];
-    logic signed [7:0] stage1_imag [0:7];
-    logic signed [7:0] stage2_real [0:7];
-    logic signed [7:0] stage2_imag [0:7];
-    
-    // W8^k = e^(-j*2*pi*k/8) 
-    // Calculated with q.c
-    parameter signed [7:0] W8_0_REAL = 8'h7F; 
-    parameter signed [7:0] W8_0_IMAG = 8'h00; 
-    parameter signed [7:0] W8_1_REAL = 8'h5A; 
-    parameter signed [7:0] W8_1_IMAG = 8'hA6; 
-    parameter signed [7:0] W8_2_REAL = 8'h00;
-    parameter signed [7:0] W8_2_IMAG = 8'h80; 
-    parameter signed [7:0] W8_3_REAL = 8'hA6; 
-    parameter signed [7:0] W8_3_IMAG = 8'hA6; 
+    logic signed [15:0] stage0_real [0:7];
+    logic signed [15:0] stage0_imag [0:7];
+    logic signed [15:0] stage1_real [0:7];
+    logic signed [15:0] stage1_imag [0:7];
+    logic signed [15:0] stage2_real [0:7];
+    logic signed [15:0] stage2_imag [0:7];
+
+    parameter signed [15:0] W8_0_REAL = 16'h0100;  
+    parameter signed [15:0] W8_0_IMAG = 16'h0000;  
+    parameter signed [15:0] W8_1_REAL = 16'h00B5;  
+    parameter signed [15:0] W8_1_IMAG = 16'hFF4B;  
+    parameter signed [15:0] W8_2_REAL = 16'h0000;  
+    parameter signed [15:0] W8_2_IMAG = 16'hFF00;  
+    parameter signed [15:0] W8_3_REAL = 16'hFF4B;  
+    parameter signed [15:0] W8_3_IMAG = 16'hFF4B;  
     
     typedef enum logic [2:0] {
         IDLE,
@@ -45,29 +43,29 @@ module fft (
     endfunction
     
     function void complex_mult;
-        input signed [7:0] a_real; 
-        input signed [7:0] a_imag;
-        input signed [7:0] b_real;
-        input signed [7:0] b_imag;
-        output signed [7:0] result_real;
-        output signed [7:0] result_imag;
-        logic signed [15:0] temp_real;
-        logic signed [15:0] temp_imag;
+        input signed [15:0] a_real; 
+        input signed [15:0] a_imag;
+        input signed [15:0] b_real;
+        input signed [15:0] b_imag;
+        output signed [15:0] result_real;
+        output signed [15:0] result_imag;
+        logic signed [31:0] temp_real;
+        logic signed [31:0] temp_imag;
         begin
-            temp_real = (a_real * b_real - a_imag * b_imag);
-            temp_imag = (a_real * b_imag + a_imag * b_real);
-            result_real = temp_real[14:7];  
-            result_imag = temp_imag[14:7];  
+            temp_real = (a_real * b_real) - (a_imag * b_imag);
+            temp_imag = (a_real * b_imag) + (a_imag * b_real);
+            result_real = temp_real[23:8];  
+            result_imag = temp_imag[23:8];  
         end
     endfunction
     
     task butterfly;
-        input signed [7:0] a_real, a_imag;
-        input signed [7:0] b_real, b_imag;
-        input signed [7:0] w_real, w_imag;
-        output signed [7:0] out1_real, out1_imag;
-        output signed [7:0] out2_real, out2_imag;
-        logic signed [7:0] wb_real, wb_imag;
+        input signed [15:0] a_real, a_imag;
+        input signed [15:0] b_real, b_imag;
+        input signed [15:0] w_real, w_imag;
+        output signed [15:0] out1_real, out1_imag;
+        output signed [15:0] out2_real, out2_imag;
+        logic signed [15:0] wb_real, wb_imag;
         begin
             complex_mult(w_real, w_imag, b_real, b_imag, wb_real, wb_imag);
             out1_real = a_real + wb_real;
@@ -101,7 +99,6 @@ module fft (
             IDLE: begin
                 done <= 1'b0;
                 for (int i = 0; i < 8; i++) begin
-                    // 0,4,2,6,1,5,3,7 bit reversal trick
                     stage0_real[i] <= x_real[bit_reverse(i)]; 
                     stage0_imag[i] <= x_imag[bit_reverse(i)];  
                 end
@@ -163,44 +160,43 @@ module de1_soc_top (
     logic clk;
     logic rst_n;
     logic start;
-    logic signed [7:0] x_real [0:7];
-    logic signed [7:0] x_imag [0:7];
-    wire signed [7:0] X_real [0:7];
-    wire signed [7:0] X_imag [0:7];
+    logic signed [15:0] x_real [0:7];  
+    logic signed [15:0] x_imag [0:7];
+    wire signed [15:0] X_real [0:7];
+    wire signed [15:0] X_imag [0:7];
     wire done;
     
     assign clk = CLOCK_50;
     assign rst_n = KEY[0];
     assign start = ~KEY[1];
 
-    // Impulse 
-    // x[0] = 1 + 0j (7F, 00), all others 0
-    // X[0:7] = 1 + 0j (7F, 00)
-    // always_comb begin
-    //     x_real[0] = 8'h7F; 
-    //     x_imag[0] = 8'h00; 
-    //     for (int i = 1; i < 8; i++) begin
-    //         x_real[i] = 8'h00;
-    //         x_imag[i] = 8'h00;
-    //     end
-    // end
-	 
-	// sin(2π * n / 8) for n = 0,1,2,...,7
-    // x[0:7] = 0, 0.707, 1, 0.707, 0, -0.707, -1, -0.707
-    // X[1] = -4j, X[7] = +4j, all others = 0 -> In practice, some small rounding inaccuracies
     always_comb begin
-        // Calculated with q.c
-        x_real[0] = 8'h00;  
-        x_real[1] = 8'h5A;  
-        x_real[2] = 8'h7F;  
-        x_real[3] = 8'h5A; 
-        x_real[4] = 8'h00;  
-        x_real[5] = 8'hA6;  
-        x_real[6] = 8'h80;  
-        x_real[7] = 8'hA6;  
+        if (SW[9]) begin
+            // Impulse
+            // x[0] = 1.0, all others = 0
+            // Expected: X[k] = 1.0 for all k
+            x_real[0] = 16'h0100; 
+            x_imag[0] = 16'h0000; 
+            for (int i = 1; i < 8; i++) begin
+                x_real[i] = 16'h0000; 
+                x_imag[i] = 16'h0000; 
+            end
+        end else begin
+            // sin(2pi*n/8)
+            // x = [0, 0.70710677, 1, 0.70710677, 0, -0.70710677, -1, -0.70710677]
+            // Expected: X[1] = -4j, X[7] = +4j, all others ~ 0
+            x_real[0] = 16'h0000; 
+            x_real[1] = 16'h00B5; 
+            x_real[2] = 16'h0100;  
+            x_real[3] = 16'h00B5; 
+            x_real[4] = 16'h0000; 
+            x_real[5] = 16'hFF4B;  
+            x_real[6] = 16'hFF00;  
+            x_real[7] = 16'hFF4B; 
 
-        for (int i = 0; i < 8; i++) begin
-            x_imag[i] = 8'h00;
+            for (int i = 0; i < 8; i++) begin
+                x_imag[i] = 16'h0000; 
+            end
         end
     end
 
@@ -214,6 +210,8 @@ module de1_soc_top (
         .X_imag(X_imag),
         .done(done)
     );
+
+    assign LEDR[0] = done; 
     
     function [6:0] hex_decoder;
         input [3:0] value;
@@ -242,20 +240,13 @@ module de1_soc_top (
     // Toggle switches to see each element of X output array
     // (blank)(blank)(real part)(real part)(img part)(img part)
     wire [2:0] index;
-    assign index = 
-        (SW[0]) ? 3'd0 :
-        (SW[1]) ? 3'd1 :
-        (SW[2]) ? 3'd2 :
-        (SW[3]) ? 3'd3 :
-        (SW[4]) ? 3'd4 :
-        (SW[5]) ? 3'd5 :
-        (SW[6]) ? 3'd6 :
-        (SW[7]) ? 3'd7 : 3'd0;
-    assign LEDR[9:0] = SW[9:0]; 
-    assign HEX0 = hex_decoder(X_imag[index][3:0]);
-    assign HEX1 = hex_decoder(X_imag[index][7:4]);
-    assign HEX2 = hex_decoder(X_real[index][3:0]);
-    assign HEX3 = hex_decoder(X_real[index][7:4]);
+    assign index = SW[2:0]; 
+    assign show_real = SW[3]; 
+
+    assign HEX0 = hex_decoder(show_real ? X_real[index][3:0] : X_imag[index][3:0]);
+    assign HEX1 = hex_decoder(show_real ? X_real[index][7:4] : X_imag[index][7:4]);
+    assign HEX2 = hex_decoder(show_real ? X_real[index][11:8] : X_imag[index][11:8]);
+    assign HEX3 = hex_decoder(show_real ? X_real[index][15:12] : X_imag[index][15:12]);
     assign HEX4 = 7'b1111111;
     assign HEX5 = 7'b1111111;
 endmodule
