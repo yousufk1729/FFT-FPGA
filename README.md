@@ -32,6 +32,8 @@ For the FPGA, I estimate time by counting clock cycles. Of course, we already kn
 
 ## Next Steps
 
+After writing this code, I realize there is no reason to implement steps of the butterfly operations as different states in a state machine. The entire computation is just an elaborate combinational circuit. My first step would be to do everything in 1 clock cycle, then worry about dealing with multiple inputs. 
+
 A clear next step for this project is pipelining to take advantage of the FPGA, as well as writing a better test suite, and sending data through UART instead of my ECE241 switch-toggling behaviour.
 
 ## References
