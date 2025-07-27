@@ -20,19 +20,19 @@ Measuring performance is quite a difficult operation. For simplicity, I use an a
 
 In Python, this is easy to do using time.perf_counter(). 
 
-Unfortunately, my C code is fast enough that the clock() function and the Windows QueryPerformanceFrequency and QueryPerformanceCounter functions do not have enough resolution to register anything (Windows API has 100 ns on my machine). When I tried to use delay loops to compute 1e6 identical FFTs and average the total time, the compiler optimized it out. I didn’t feel like writing randomized test cases for each of my 3 implementations and it’s not like timing is a serious goal anyway, so I just estimate time using __rdtsc() to return CPU cycles and divide by my processor’s 2.9 GHz clock speed. 
+Unfortunately, my C code is fast enough that the clock() function and the Windows QueryPerformanceFrequency and QueryPerformanceCounter functions do not have enough resolution to register anything (Windows API has 100 ns on my machine). When I tried to use delay loops to compute 1e6 identical FFTs and average the total time, the compiler optimized it out. I didn’t feel like writing randomized test cases for each of my implementations and it’s not like timing is a serious goal anyway, so I just estimate time using __rdtsc(), which returns clock cycles. 
 
-FPGA testing coming soon… I need to add a timer and use smth like JTAG UART to send it back
+For the FPGA, I estimate time by counting clock cycles. Of course, we already know this implementation takes 4 cycles to compute the FFT by looking at the FFT state machine, which is confirmed by the timer. 
 
 | Implementation | Execution Time | Cycles | Speedup |
 |----------------|----------------|--------|-------------------|
 | Python | 2,078,200 ns | too many | 1x |
-| C | 108.62 ns | ~315 | 19,133x |
-| FPGA | … | - | - |
+| C | 108.62 ns | ~315 (2.9 GHz processor) | 19,133x |
+| FPGA | 80 ns | 4 (50 MHz processor)| 1.36x, 25978x |
 
 ## Next Steps
 
-A clear next step for this project is pipelining to take advantage of the FPGA, as well as writing a better test suite. 
+A clear next step for this project is pipelining to take advantage of the FPGA, as well as writing a better test suite, and sending data through UART instead of my ECE241 switch-toggling behaviour.
 
 ## References
 - https://w.wiki/EjDe

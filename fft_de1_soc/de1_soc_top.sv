@@ -166,9 +166,42 @@ module de1_soc_top (
     wire signed [15:0] X_imag [0:7];
     wire done;
     
+    logic [31:0] timer_count;
+    logic [31:0] execution_cycles;
+    logic timing_active;
+    logic start_prev;
+    
     assign clk = CLOCK_50;
     assign rst_n = KEY[0];
     assign start = ~KEY[1];
+
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            timer_count <= 32'h0;
+            execution_cycles <= 32'h0;
+            timing_active <= 1'b0;
+            start_prev <= 1'b0;
+        end else begin
+            start_prev <= start;
+            
+            // Detect start pulse (rising edge)
+            if (start && !start_prev) begin
+                timer_count <= 32'h0;
+                timing_active <= 1'b1;
+            end
+            
+            // Count cycles while FFT is running
+            if (timing_active && !done) begin
+                timer_count <= timer_count + 1;
+            end
+            
+            // Capture final count when done
+            if (done && timing_active) begin
+                execution_cycles <= timer_count;
+                timing_active <= 1'b0;
+            end
+        end
+    end
 
     always_comb begin
         if (SW[9]) begin
@@ -211,7 +244,7 @@ module de1_soc_top (
         .done(done)
     );
 
-    assign LEDR[0] = done; 
+    assign LEDR[0] = done;  
     
     function [6:0] hex_decoder;
         input [3:0] value;
@@ -237,16 +270,21 @@ module de1_soc_top (
         end
     endfunction
 
-    // Toggle switches to see each element of X output array
-    // (blank)(blank)(real part)(real part)(img part)(img part)
     wire [2:0] index;
-    assign index = SW[2:0]; 
-    assign show_real = SW[3]; 
+    wire show_real;
+    wire show_timer;
+    
+    assign index = SW[2:0];      
+    assign show_real = SW[3];    
+    assign show_timer = SW[4];   
+    
+    wire [15:0] display_data;
+    assign display_data = show_timer ? execution_cycles[15:0] : show_real ? X_real[index] : X_imag[index];
 
-    assign HEX0 = hex_decoder(show_real ? X_real[index][3:0] : X_imag[index][3:0]);
-    assign HEX1 = hex_decoder(show_real ? X_real[index][7:4] : X_imag[index][7:4]);
-    assign HEX2 = hex_decoder(show_real ? X_real[index][11:8] : X_imag[index][11:8]);
-    assign HEX3 = hex_decoder(show_real ? X_real[index][15:12] : X_imag[index][15:12]);
+    assign HEX0 = hex_decoder(display_data[3:0]);
+    assign HEX1 = hex_decoder(display_data[7:4]);
+    assign HEX2 = hex_decoder(display_data[11:8]);
+    assign HEX3 = hex_decoder(display_data[15:12]);
     assign HEX4 = 7'b1111111;
     assign HEX5 = 7'b1111111;
 endmodule
